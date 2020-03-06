@@ -20,17 +20,19 @@ gr.add_vertex(data)
 
 
 visited = set()
-while len(visited) < 500:
+while True:
     dfs = gr.dfs(data)
 
     curr_room = gr.rooms[dfs[-1]]
     for room_id in dfs:
         visited.add(room_id)
+    if len(visited) >= 500:
+        break
     print('visited rooms ---->', visited)
     unexplored_dirs = gr.get_unexplored_dir(curr_room)
     data = curr_room
     if not len(unexplored_dirs):
-        data = gr.backtrack_to_unex(curr_room)
+        data = gr.btrack_to_unex(curr_room)
     print("current room ---->", data)
 
 

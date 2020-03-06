@@ -50,6 +50,7 @@ class Graph:
 
     def __init__(self):
         self.rooms = {}
+        self.grid = {}
 
     def add_vertex(self, room):
         """
@@ -57,7 +58,7 @@ class Graph:
         """
         if room['room_id'] not in self.rooms:
             self.rooms[room['room_id']] = room
-            self.rooms[room['room_id']]['exits'] = {d: '?' for d in room['exits']}
+            # self.rooms[room['room_id']]['exits'] = {d: '?' for d in room['exits']}
 
     def dfs(self, room, path=None):
         if not path:
@@ -79,23 +80,25 @@ class Graph:
         return [d for d in self.rooms[room['room_id']]['exits']]
 
     def get_room_in_dir(self, room, direction):
-    
-        print('exits in dir ---->',
-              self.rooms[room['room_id']]['exits'], end=', ')
-        print('current room id ---->', room['room_id'])
         return self.rooms[room['room_id']]['exits'][direction]
 
     def explore(self, direction, room, next_room=None):
         prev_room = room['room_id']
-        if len(room['items']):
-            # pick up treasure
-            for item in room['items']:
-                take = post(end['take'], {'name': item})
-                self.rooms[prev_room]['items'] = take['items']
-                print(
-                    f'response from taking {item} from room {prev_room} ---->', take)
+        # if len(room['items']):
+        #     status = post(end['status'], {})
+        #     if int(status['encumbrance']) <= int(status['strength']):
+        #         # pick up treasure
+        #         for item in room['items']:
+        #             take = post(end['take'], {'name': item})
+        #             self.rooms[prev_room]['items'] = take['items']
+        #             print(
+        #                 f'response from taking {item} from room {prev_room} ---->', take)
 
-        # if (shrine) then pray
+        # if (shrine) pray
+        # if (elevation) fly
+        # if (know straight line) dash
+        status = post(end['status'], {})
+        print(status)
         if next_room:
             res = post(end['move'], {
                        'direction': direction, 'next_room_id': str(next_room)})
@@ -136,6 +139,7 @@ class Graph:
         '''
         q = Queue()
         all_dirs = self.get_all_directions(room)
+        visited = set()
         for d in all_dirs:
             next_room = self.get_room_in_dir(room, d)
             # enqueue inital directions in self.explore_path format
@@ -144,15 +148,93 @@ class Graph:
         while q.size:
             back_path = q.dequeue()
             room_in_dir = back_path[-1]['next_room']
+            visited.add(room_in_dir)
             current_room = self.rooms[room_in_dir]
             unex = self.get_unexplored_dir(self.rooms[room_in_dir])
-            print('bfs path ---->', back_path)
+
             if len(unex):
                 return self.explore_path(room, back_path)
             else:
                 next_dirs = self.get_all_directions(self.rooms[room_in_dir])
                 for d in next_dirs:
                     room_in_next_dir = self.get_room_in_dir(current_room, d)
-                    # enqueue next room's directions in self.explore_path format
-                    q.enqueue(list(back_path) +
-                              [{'d': d, 'next_room': room_in_next_dir}])
+                    if room_in_next_dir not in visited:
+                        # enqueue next room's directions in self.explore_path format
+                        q.enqueue(list(back_path) +
+                                  [{'d': d, 'next_room': room_in_next_dir}])
+
+    def get_path_to_room(self, curr, room_id):
+        '''
+        Accepts (current room, target room id)
+        returns shortest path to target room from current room
+        '''
+        if curr['room_id'] == room_id:
+            return curr
+        curr_room = curr
+        q = Queue()
+        all_dirs = self.get_all_directions(curr)
+        print('all dirs ---->', all_dirs)
+        visited = set()
+        for d in all_dirs:
+            next_room = self.get_room_in_dir(curr, d)
+            print('next_room ---->', next_room)
+            q.enqueue([{'d': d, 'next_room': next_room}])
+        while q.size:
+            path_to_room = q.dequeue()
+            room_in_dir = path_to_room[-1]['next_room']
+            d_in_dir = path_to_room[-1]['d']
+            curr_room = self.rooms[room_in_dir]
+            visited.add(f'{room_in_dir}{d_in_dir}')
+            if room_in_dir == room_id:
+                return self.explore_path(curr, path_to_room)
+            else:
+                next_dirs = self.get_all_directions(self.rooms[room_in_dir])
+                print('next_dirs ---->', f'{room_in_dir}: {next_dirs}')
+                for d in next_dirs:
+                    room_in_next_dir = self.get_room_in_dir(curr_room, d)
+                    if f'{room_in_next_dir}{d}' not in visited:
+                        q.enqueue(list(path_to_room) +
+                                  [{'d': d, 'next_room': room_in_next_dir}])
+
+    # def get_path_to_room(self, curr, room_id):
+    #     '''
+    #     Accepts (current room, target room id)
+    #     returns shortest path to target room from current room
+    #     '''
+    #     curr_room = curr
+    #     q = Queue()
+    #     all_dirs = self.get_all_directions(curr)
+    #     visited = set()
+    #     for d in all_dirs:
+    #         next_room = self.get_room_in_dir(curr, d)
+    #         q.enqueue([{'d': d, 'next_room': next_room}])
+    #     while q.size:
+    #         path_to_room = q.dequeue()
+    #         room_in_dir = path_to_room[-1]['next_room']
+    #         curr_room = self.rooms[room_in_dir]
+    #         if room_in_dir == room_id:
+    #             return self.explore_path(curr, path_to_room)
+    #         else:
+    #             next_dirs = self.get_all_directions(self.rooms[room_in_dir])
+    #             for d in next_dirs:
+    #                 room_in_next_dir = self.get_room_in_dir(curr_room, d)
+    #                 if room_in_next_dir not in visited:
+    #                     print(room_in_next_dir)
+    #                     if self.rooms[room_in_next_dir]['terrain'] != 'TRAP':
+    #                         q.enqueue(list(path_to_room) +
+    #                                   [{'d': d, 'next_room': room_in_next_dir}])
+    #                     elif len(next_dirs) < 2:
+    #                         q.enqueue(list(path_to_room) +
+    #                                   [{'d': d, 'next_room': room_in_next_dir}])
+
+
+"""
+gold, encumbrance, strength = post(get gold, encumbrance, strength)
+while gold < 1000:
+  while encumbrance < strength:
+    traverse and pick up treasure
+    gold, encumbrance, strength = post(get gold, encumbrance, strength)
+  go to shop, sell treasure
+  gold, encumbrance, strength = post(get gold, encumbrance, strength)
+go to namechanger, change name
+"""
