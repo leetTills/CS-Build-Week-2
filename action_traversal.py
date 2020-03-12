@@ -89,12 +89,6 @@ if status['name'][:4] == 'User':
     status = post(end['status'], {})
     print(status)
 if status['name'][:4] != 'User':
-    # print('status ---->', status)
-    # # 55 is wishing well
-    # well = gr.get_path_to_room(data, 55)
-    # print("wishing well ---->", well)
-    # mine_room = gr.get_path_to_room(data, int(
-    #     input('Which room is your mining room? ')))
     balance = get(end['bal'])
     print('balance ---->', balance)
     while True:
